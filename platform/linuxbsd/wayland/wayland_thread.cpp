@@ -467,6 +467,13 @@ void WaylandThread::_wl_registry_on_global(void *data, struct wl_registry *wl_re
 		return;
 	}
 
+	if (strcmp(interface, wl_shell_interface.name) == 0) {
+		registry->wl_shell = (struct wl_shell *)wl_registry_bind(wl_registry, name, &wl_shell_interface, 1);
+		registry->wl_shell_name = name;
+
+		return;
+	}
+
 	if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
 		registry->xdg_wm_base = (struct xdg_wm_base *)wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, CLAMP((int)version, 1, 6));
 		registry->xdg_wm_base_name = name;
@@ -630,6 +637,16 @@ void WaylandThread::_wl_registry_on_global_remove(void *data, struct wl_registry
 
 			ss->wl_data_device = nullptr;
 		}
+
+		return;
+	}
+
+	if (name == registry->wl_shell_name) {
+		if (registry->wl_shell) {
+			registry->wl_shell = nullptr;
+		}
+
+		registry->wl_shell_name = 0;
 
 		return;
 	}
@@ -1071,6 +1088,31 @@ void WaylandThread::_wl_output_on_name(void *data, struct wl_output *wl_output, 
 }
 
 void WaylandThread::_wl_output_on_description(void *data, struct wl_output *wl_output, const char *description) {
+}
+
+void WaylandThreadL::_wl_shell_on_ping(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t serial) {
+	wl_shell_surface_pong(wl_shell_surface, serial);
+}
+
+void WaylandThread::_wl_shell_surface_on_configure(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t edges, int32_t width, int32_t height) {
+	WindowState *ws = (WindowState *)data;
+	ERR_FAIL_NULL(ws);
+
+	if (width != 0 && height != 0) {
+		window_state_update_size(ws, width, height);
+	}
+
+	DEBUG_LOG_WAYLAND_THREAD(vformat("shell surface on configure width %d and height %d", width, height));
+}
+
+void WaylandThread::_wl_shell_surface_on_popup_done(void * data, struct wl_shell_surface *wl_shell_surface) {
+	WindowState *ws = (WindowState *)data;
+	ERR_FAIL_NULL(ws);
+
+	Ref<WindowEventMessage> msg;
+	msg.instantiate();
+	msg->event = DisplayServer::WINDOW_EVENT_CLOSE_REQUEST;
+	ws->wayland_thread->push_message(msg);
 }
 
 void WaylandThread::_xdg_wm_base_on_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
@@ -2946,6 +2988,10 @@ void WaylandThread::window_state_update_size(WindowState *p_ws, int p_width, int
 			wp_viewport_set_destination(p_ws->wp_viewport, p_width, p_height);
 		}
 
+		// if (p_ws->wl_shell_surface) {
+		// 	wl_shell_surface_set_geometry(p_ws->wl_shell_surface, 0, 0, p_width, p_height);
+		// }
+
 		if (p_ws->xdg_surface) {
 			xdg_surface_set_window_geometry(p_ws->xdg_surface, 0, 0, p_width, p_height);
 		}
@@ -3227,6 +3273,15 @@ void WaylandThread::window_create(DisplayServer::WindowID p_window_id, int p_wid
 	}
 #endif
 
+#ifdef AURORAOS_ENABLEd
+	if (!decorated) {
+		ws.wl_shell_surface = wl_shell_get_shell_surface(registry.wl_shell, ws.wl_surface);
+		wl_shell_surface_add_listener(ws.wl_shell_surface, &wl_shell_surface_listener, &ws);
+		if (ws.wl_shell_surface == nullptr)
+			WARN_PRINT("nullptr surface");
+		wl_shell_surface_set_toplevel(ws.wl_shell_surface);
+	}
+#else
 	if (!decorated) {
 		// libdecor has failed loading or is disabled, we shall handle xdg_toplevel
 		// creation and decoration ourselves (and by decorating for now I just mean
@@ -3244,6 +3299,7 @@ void WaylandThread::window_create(DisplayServer::WindowID p_window_id, int p_wid
 			decorated = true;
 		}
 	}
+#endif
 
 	ws.frame_callback = wl_surface_frame(ws.wl_surface);
 	wl_callback_add_listener(ws.frame_callback, &frame_wl_callback_listener, &ws);
@@ -3708,7 +3764,12 @@ Error WaylandThread::init() {
 
 	ERR_FAIL_NULL_V_MSG(registry.wl_shm, ERR_UNAVAILABLE, "Can't obtain the Wayland shared memory global.");
 	ERR_FAIL_NULL_V_MSG(registry.wl_compositor, ERR_UNAVAILABLE, "Can't obtain the Wayland compositor global.");
+
+#ifdef AURORAOS_ENABLED
+	ERR_FAIL_NULL_V_MSG(registry.wl_shell, ERR_UNAVAILAVLE, "Can't obtain the Wayland Wl shell gloabal.");
+#else
 	ERR_FAIL_NULL_V_MSG(registry.xdg_wm_base, ERR_UNAVAILABLE, "Can't obtain the Wayland XDG shell global.");
+#endif
 
 	if (!registry.xdg_decoration_manager) {
 #ifdef LIBDECOR_ENABLED
@@ -4269,6 +4330,10 @@ void WaylandThread::destroy() {
 	}
 #endif // LIBDECOR_ENABLED
 
+	if (main_window.wl_shell_surface) {
+		wl_shell_surface_destroy(main_window.wl_shell_surface);
+	}
+
 	if (main_window.xdg_toplevel) {
 		xdg_toplevel_destroy(main_window.xdg_toplevel);
 	}
@@ -4385,6 +4450,10 @@ void WaylandThread::destroy() {
 
 	if (registry.wp_viewporter) {
 		wp_viewporter_destroy(registry.wp_viewporter);
+	}
+
+	if (registry.wl_shell) {
+		wl_shell_destroy(registry.wl_shell);
 	}
 
 	if (registry.xdg_wm_base) {

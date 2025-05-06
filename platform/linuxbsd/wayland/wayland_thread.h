@@ -33,6 +33,8 @@
 
 #ifdef WAYLAND_ENABLED
 
+#define AURORAOS_ENABLED
+
 #include "key_mapping_xkb.h"
 
 #ifdef SOWRAP_ENABLED
@@ -65,10 +67,13 @@
 #include "wayland/protocol/text_input.gen.h"
 #include "wayland/protocol/viewporter.gen.h"
 #include "wayland/protocol/wayland.gen.h"
+
+#ifndef AURORAOS_ENABLED
 #include "wayland/protocol/xdg_activation.gen.h"
 #include "wayland/protocol/xdg_decoration.gen.h"
 #include "wayland/protocol/xdg_foreign.gen.h"
 #include "wayland/protocol/xdg_shell.gen.h"
+#endif
 
 #ifdef LIBDECOR_ENABLED
 #ifdef SOWRAP_ENABLED
@@ -142,6 +147,10 @@ public:
 
 		List<struct wl_output *> wl_outputs;
 		List<struct wl_seat *> wl_seats;
+
+		// wl-shell globals.
+		struct wl_shell *wl_shell = nullptr;
+		uint32_t wl_shell_name = 0;
 
 		// xdg-shell globals.
 
@@ -217,6 +226,9 @@ public:
 		struct wl_surface *wl_surface = nullptr;
 		struct xdg_surface *xdg_surface = nullptr;
 		struct xdg_toplevel *xdg_toplevel = nullptr;
+
+		// wl-shell surface
+		struct wl_shell_surface *wl_shell_surface = nullptr;
 
 		struct wp_viewport *wp_viewport = nullptr;
 		struct wp_fractional_scale_v1 *wp_fractional_scale = nullptr;
@@ -591,6 +603,11 @@ private:
 	static void _wl_data_source_on_dnd_finished(void *data, struct wl_data_source *wl_data_source);
 	static void _wl_data_source_on_action(void *data, struct wl_data_source *wl_data_source, uint32_t dnd_action);
 
+	// wl-shell event handlers.
+	static void _wl_shell_on_ping(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t serial);
+	static void _wl_shell_surface_on_configure(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t edges, int32_t width, int32_t height);
+	static void _wl_shell_surface_on_popup_done(void *data, struct wl_shell_surface *wl_shell_surface);
+
 	// xdg-shell event handlers.
 	static void _xdg_wm_base_on_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial);
 
@@ -735,6 +752,13 @@ private:
 		.dnd_drop_performed = _wl_data_source_on_dnd_drop_performed,
 		.dnd_finished = _wl_data_source_on_dnd_finished,
 		.action = _wl_data_source_on_action,
+	};
+
+	// wl-shell event listeners.
+	static constexpr struct wl_shell_surface_listener wl_shell_surface_listener = {
+		.ping = _wl_shell_on_ping,
+		.configure = _wl_shell_surface_on_configure,
+		.popup_done = _wl_sheell_surface_on_popup_done,
 	};
 
 	// xdg-shell event listeners.
