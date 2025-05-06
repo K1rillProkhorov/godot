@@ -403,9 +403,11 @@ public:
 		// the pinch gesture, while godot instead wants its delta.
 		wl_fixed_t old_pinch_scale = 0;
 
+#ifndef AURORAOS_ENABLED
 		struct wl_surface *cursor_surface = nullptr;
 		struct wl_callback *cursor_frame_callback = nullptr;
 		uint32_t cursor_time_ms = 0;
+#endif
 
 		// This variable is needed to buffer all pointer changes until a
 		// wl_pointer.frame event, as per Wayland's specification. Everything is
@@ -472,7 +474,9 @@ public:
 		bool ime_active = false;
 		String ime_text;
 		String ime_text_commit;
+#ifndef AURORAOS_ENABLED
 		Vector2i ime_cursor;
+#endif
 		Rect2i ime_rect;
 	};
 
@@ -503,6 +507,7 @@ private:
 
 	List<Ref<Message>> messages;
 
+#ifndef AURORAOS_ENABLED
 	String cursor_theme_name;
 	int unscaled_cursor_size = 24;
 
@@ -522,6 +527,7 @@ private:
 	struct CustomCursor *current_custom_cursor = nullptr;
 
 	DisplayServer::CursorShape last_cursor_shape = DisplayServer::CURSOR_ARROW;
+#endif
 
 	PointerConstraint pointer_constraint = PointerConstraint::NONE;
 
@@ -564,7 +570,9 @@ private:
 	static void _wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities);
 	static void _wl_seat_on_name(void *data, struct wl_seat *wl_seat, const char *name);
 
+#ifndef AURORAOS_ENABLED
 	static void _cursor_frame_callback_on_done(void *data, struct wl_callback *wl_callback, uint32_t time_ms);
+#endif
 
 	static void _wl_pointer_on_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y);
 	static void _wl_pointer_on_leave(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface);
@@ -703,9 +711,11 @@ private:
 		.name = _wl_seat_on_name,
 	};
 
+#ifndef AURORAOS_ENABLED
 	static constexpr struct wl_callback_listener cursor_frame_callback_listener {
 		.done = _cursor_frame_callback_on_done,
 	};
+#endif
 
 	static constexpr struct wl_pointer_listener wl_pointer_listener = {
 		.enter = _wl_pointer_on_enter,
@@ -909,13 +919,17 @@ private:
 	static void _seat_state_set_current(WaylandThread::SeatState &p_ss);
 	static bool _seat_state_configure_key_event(WaylandThread::SeatState &p_seat, Ref<InputEventKey> p_event, xkb_keycode_t p_keycode, bool p_pressed);
 
+#ifndef AURORAOS_ENABLED
 	static void _wayland_state_update_cursor();
+#endif
 
 	void _set_current_seat(struct wl_seat *p_seat);
 
+#ifndef AURORAOS_ENABLED
 	bool _load_cursor_theme(int p_cursor_size);
 
 	void _update_scale(int p_scale);
+#endif
 
 public:
 	Mutex &mutex = thread_data.mutex;
@@ -939,7 +953,9 @@ public:
 	void seat_state_set_hint(SeatState *p_ss, int p_x, int p_y);
 	void seat_state_confine_pointer(SeatState *p_ss);
 
+#ifndef AURORAOS_ENABLED
 	static void seat_state_update_cursor(SeatState *p_ss);
+#endif
 
 	void seat_state_echo_keys(SeatState *p_ss);
 
@@ -986,12 +1002,14 @@ public:
 	DisplayServer::WindowID pointer_get_pointed_window_id() const;
 	BitField<MouseButtonMask> pointer_get_button_mask() const;
 
+#ifndef AURORAOS_ENABLED
 	void cursor_hide();
 	void cursor_set_shape(DisplayServer::CursorShape p_cursor_shape);
 
 	void cursor_set_custom_shape(DisplayServer::CursorShape p_cursor_shape);
 	void cursor_shape_set_custom_image(DisplayServer::CursorShape p_cursor_shape, Ref<Image> p_image, const Point2i &p_hotspot);
 	void cursor_shape_clear_custom_image(DisplayServer::CursorShape p_cursor_shape);
+#endif
 
 	void window_set_ime_active(const bool p_active, DisplayServer::WindowID p_window_id);
 	void window_set_ime_position(const Point2i &p_pos, DisplayServer::WindowID p_window_id);

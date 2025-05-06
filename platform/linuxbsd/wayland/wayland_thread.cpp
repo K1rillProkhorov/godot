@@ -261,6 +261,7 @@ void WaylandThread::_set_current_seat(struct wl_seat *p_seat) {
 	pointer_set_constraint(pointer_constraint);
 }
 
+#ifndef AURORAOS_ENABLED
 // Returns whether it loaded the theme or not.
 bool WaylandThread::_load_cursor_theme(int p_cursor_size) {
 	if (wl_cursor_theme) {
@@ -361,6 +362,7 @@ void WaylandThread::_update_scale(int p_scale) {
 		cursor_set_shape(last_cursor_shape);
 	}
 }
+#endif
 
 void WaylandThread::_wl_registry_on_global(void *data, struct wl_registry *wl_registry, uint32_t name, const char *interface, uint32_t version) {
 	RegistryState *registry = (RegistryState *)data;
@@ -1070,7 +1072,9 @@ void WaylandThread::_wl_output_on_done(void *data, struct wl_output *wl_output) 
 
 	ss->data = ss->pending_data;
 
+#ifndef AURORAOS_ENABLED
 	ss->wayland_thread->_update_scale(ss->data.scale);
+#endif
 
 	DEBUG_LOG_WAYLAND_THREAD(vformat("Output %x done.", (size_t)wl_output));
 }
@@ -1308,8 +1312,10 @@ void WaylandThread::_wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat
 	// Pointer handling.
 	if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
 		if (!ss->wl_pointer) {
+#ifndef AURORAOS_ENABLED
 			ss->cursor_surface = wl_compositor_create_surface(ss->registry->wl_compositor);
 			wl_surface_commit(ss->cursor_surface);
+#endif
 
 			ss->wl_pointer = wl_seat_get_pointer(wl_seat);
 			wl_pointer_add_listener(ss->wl_pointer, &wl_pointer_listener, ss);
@@ -1386,6 +1392,7 @@ void WaylandThread::_wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat
 void WaylandThread::_wl_seat_on_name(void *data, struct wl_seat *wl_seat, const char *name) {
 }
 
+#ifndef AURORAOS_ENABLED
 void WaylandThread::_cursor_frame_callback_on_done(void *data, struct wl_callback *wl_callback, uint32_t time_ms) {
 	wl_callback_destroy(wl_callback);
 
@@ -1398,6 +1405,7 @@ void WaylandThread::_cursor_frame_callback_on_done(void *data, struct wl_callbac
 
 	seat_state_update_cursor(ss);
 }
+#endif
 
 void WaylandThread::_wl_pointer_on_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
 	if (!surface || !wl_proxy_is_godot((struct wl_proxy *)surface)) {
@@ -1409,12 +1417,14 @@ void WaylandThread::_wl_pointer_on_enter(void *data, struct wl_pointer *wl_point
 	SeatState *ss = (SeatState *)data;
 	ERR_FAIL_NULL(ss);
 
+#ifndef AURORAOS_ENABLED
 	ERR_FAIL_NULL(ss->cursor_surface);
 	ss->pointer_enter_serial = serial;
 	ss->pointed_surface = surface;
 	ss->last_pointed_surface = surface;
 
 	seat_state_update_cursor(ss);
+#endif
 
 	Ref<WindowEventMessage> msg;
 	msg.instantiate();
@@ -2644,7 +2654,10 @@ void WaylandThread::_wp_text_input_on_leave(void *data, struct zwp_text_input_v3
 	ss->ime_active = false;
 	ss->ime_text = String();
 	ss->ime_text_commit = String();
+
+#ifndef AURORAOS_ENABLED
 	ss->ime_cursor = Vector2i();
+#endif
 
 	Ref<IMEUpdateEventMessage> msg;
 	msg.instantiate();
@@ -2661,6 +2674,7 @@ void WaylandThread::_wp_text_input_on_preedit_string(void *data, struct zwp_text
 
 	ss->ime_text = String::utf8(text);
 
+#ifndef AURORAOS_ENABLED
 	// Convert cursor positions from UTF-8 to UTF-32 offset.
 	int32_t cursor_begin_utf32 = 0;
 	int32_t cursor_end_utf32 = 0;
@@ -2699,6 +2713,7 @@ void WaylandThread::_wp_text_input_on_preedit_string(void *data, struct zwp_text
 		}
 	}
 	ss->ime_cursor = Vector2i(cursor_begin_utf32, cursor_end_utf32 - cursor_begin_utf32);
+#endif
 }
 
 void WaylandThread::_wp_text_input_on_commit_string(void *data, struct zwp_text_input_v3 *wp_text_input_v3, const char *text) {
@@ -3090,7 +3105,9 @@ void WaylandThread::seat_state_set_hint(SeatState *p_ss, int p_x, int p_y) {
 		return;
 	}
 
+#ifndef AURORAOS_ENABLED
 	zwp_locked_pointer_v1_set_cursor_position_hint(p_ss->wp_locked_pointer, wl_fixed_from_int(p_x), wl_fixed_from_int(p_y));
+#endif
 }
 
 void WaylandThread::seat_state_confine_pointer(SeatState *p_ss) {
@@ -3117,6 +3134,7 @@ void WaylandThread::seat_state_confine_pointer(SeatState *p_ss) {
 	}
 }
 
+#ifndef AURORAOS_ENABLED
 void WaylandThread::seat_state_update_cursor(SeatState *p_ss) {
 	ERR_FAIL_NULL(p_ss);
 	ERR_FAIL_NULL(p_ss->wayland_thread);
@@ -3176,6 +3194,7 @@ void WaylandThread::seat_state_update_cursor(SeatState *p_ss) {
 		wl_surface_commit(p_ss->cursor_surface);
 	}
 }
+#endif
 
 void WaylandThread::seat_state_echo_keys(SeatState *p_ss) {
 	ERR_FAIL_NULL(p_ss);
@@ -3731,10 +3750,12 @@ Error WaylandThread::init() {
 		return ERR_CANT_CREATE;
 	}
 
+#ifndef AURORAOS_ENABLED
 	if (initialize_wayland_cursor(dylibloader_verbose) != 0) {
 		WARN_PRINT("Can't load the Wayland cursor library.");
 		return ERR_CANT_CREATE;
 	}
+#endif
 
 	if (initialize_xkbcommon(dylibloader_verbose) != 0) {
 		WARN_PRINT("Can't load the XKBcommon library.");
@@ -3808,6 +3829,7 @@ Error WaylandThread::init() {
 	}
 #endif // LIBDECOR_ENABLED
 
+#ifndef AURORAOS_ENABLED
 	cursor_theme_name = OS::get_singleton()->get_environment("XCURSOR_THEME");
 
 	unscaled_cursor_size = OS::get_singleton()->get_environment("XCURSOR_SIZE").to_int();
@@ -3825,11 +3847,13 @@ Error WaylandThread::init() {
 
 	// Update the cursor.
 	cursor_set_shape(DisplayServer::CURSOR_ARROW);
+#endif
 
 	initialized = true;
 	return OK;
 }
 
+#ifndef AURORAOS_ENABLED
 void WaylandThread::cursor_hide() {
 	current_wl_cursor = nullptr;
 	current_custom_cursor = nullptr;
@@ -3947,6 +3971,7 @@ void WaylandThread::cursor_shape_clear_custom_image(DisplayServer::CursorShape p
 		}
 	}
 }
+#endif
 
 void WaylandThread::window_set_ime_active(const bool p_active, DisplayServer::WindowID p_window_id) {
 	SeatState *ss = wl_seat_get_seat_state(wl_seat_current);
@@ -3955,12 +3980,16 @@ void WaylandThread::window_set_ime_active(const bool p_active, DisplayServer::Wi
 		if (p_active) {
 			ss->ime_active = true;
 			zwp_text_input_v3_enable(ss->wp_text_input);
+#ifndef AURORAOS_ENABLED
 			zwp_text_input_v3_set_cursor_rectangle(ss->wp_text_input, ss->ime_rect.position.x, ss->ime_rect.position.y, ss->ime_rect.size.x, ss->ime_rect.size.y);
+#endif
 		} else {
 			ss->ime_active = false;
 			ss->ime_text = String();
 			ss->ime_text_commit = String();
+#ifndef AURORAOS_ENABLED
 			ss->ime_cursor = Vector2i();
+#endif
 			zwp_text_input_v3_disable(ss->wp_text_input);
 		}
 		zwp_text_input_v3_commit(ss->wp_text_input);
@@ -4368,6 +4397,7 @@ void WaylandThread::destroy() {
 			wl_pointer_destroy(ss->wl_pointer);
 		}
 
+#ifndef AURORAOS_ENABLED
 		if (ss->cursor_frame_callback) {
 			// We don't need to set a null userdata for safety as the thread is done.
 			wl_callback_destroy(ss->cursor_frame_callback);
@@ -4376,6 +4406,7 @@ void WaylandThread::destroy() {
 		if (ss->cursor_surface) {
 			wl_surface_destroy(ss->cursor_surface);
 		}
+#endif
 
 		if (ss->wl_data_device) {
 			wl_data_device_destroy(ss->wl_data_device);
@@ -4416,9 +4447,11 @@ void WaylandThread::destroy() {
 		wl_output_destroy(wl_output);
 	}
 
+#ifndef AURORAOS_ENABLED
 	if (wl_cursor_theme) {
 		wl_cursor_theme_destroy(wl_cursor_theme);
 	}
+#endif
 
 	if (registry.wp_idle_inhibit_manager) {
 		zwp_idle_inhibit_manager_v1_destroy(registry.wp_idle_inhibit_manager);
