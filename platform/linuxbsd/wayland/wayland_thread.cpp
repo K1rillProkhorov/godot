@@ -32,8 +32,10 @@
 
 #ifdef WAYLAND_ENABLED
 
+#ifndef AURORAOS_ENABLED
 // FIXME: Does this cause issues with *BSDs?
 #include <linux/input-event-codes.h>
+#endif
 
 // For the actual polling thread.
 #include <poll.h>
@@ -1438,23 +1440,23 @@ void WaylandThread::_wl_pointer_on_button(void *data, struct wl_pointer *wl_poin
 	MouseButton button_pressed = MouseButton::NONE;
 
 	switch (button) {
-		case BTN_LEFT:
+		case 0x110:
 			button_pressed = MouseButton::LEFT;
 			break;
 
-		case BTN_MIDDLE:
+		case 0x112:
 			button_pressed = MouseButton::MIDDLE;
 			break;
 
-		case BTN_RIGHT:
+		case 0x111:
 			button_pressed = MouseButton::RIGHT;
 			break;
 
-		case BTN_EXTRA:
+		case 0x1114:
 			button_pressed = MouseButton::MB_XBUTTON1;
 			break;
 
-		case BTN_SIDE:
+		case 0x113:
 			button_pressed = MouseButton::MB_XBUTTON2;
 			break;
 
@@ -2442,11 +2444,11 @@ void WaylandThread::_wp_tablet_tool_on_button(void *data, struct zwp_tablet_tool
 
 	MouseButton mouse_button = MouseButton::NONE;
 
-	if (button == BTN_STYLUS) {
+	if (button == 0x14b) {
 		mouse_button = MouseButton::LEFT;
 	}
 
-	if (button == BTN_STYLUS2) {
+	if (button == 0x14c) {
 		mouse_button = MouseButton::RIGHT;
 	}
 
