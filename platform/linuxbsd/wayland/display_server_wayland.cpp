@@ -325,6 +325,7 @@ void DisplayServerWayland::mouse_set_mode(MouseMode p_mode) {
 
 	MutexLock mutex_lock(wayland_thread.mutex);
 
+#ifndef AURORAOS_ENABLED
 	bool show_cursor = (p_mode == MOUSE_MODE_VISIBLE || p_mode == MOUSE_MODE_CONFINED);
 
 	if (show_cursor) {
@@ -336,6 +337,7 @@ void DisplayServerWayland::mouse_set_mode(MouseMode p_mode) {
 	} else {
 		wayland_thread.cursor_hide();
 	}
+#endif
 
 	WaylandThread::PointerConstraint constraint = WaylandThread::PointerConstraint::NONE;
 
@@ -977,6 +979,7 @@ DisplayServer::VSyncMode DisplayServerWayland::window_get_vsync_mode(DisplayServ
 	return DisplayServer::VSYNC_ENABLED;
 }
 
+#ifndef AURORAOS_ENABLED
 void DisplayServerWayland::cursor_set_shape(CursorShape p_shape) {
 	ERR_FAIL_INDEX(p_shape, CURSOR_MAX);
 
@@ -1055,6 +1058,7 @@ void DisplayServerWayland::cursor_set_custom_image(const Ref<Resource> &p_cursor
 		wayland_thread.cursor_shape_clear_custom_image(p_shape);
 	}
 }
+#endif
 
 int DisplayServerWayland::keyboard_get_layout_count() const {
 	MutexLock mutex_lock(wayland_thread.mutex);
@@ -1453,7 +1457,9 @@ DisplayServerWayland::DisplayServerWayland(const String &p_rendering_driver, Win
 	}
 #endif // GLES3_ENABLED
 
+#ifndef AURORAOS_ENABLED
 	cursor_set_shape(CURSOR_BUSY);
+#endif
 
 	WindowData &wd = main_window;
 
