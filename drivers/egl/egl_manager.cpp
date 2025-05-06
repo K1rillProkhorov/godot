@@ -36,6 +36,8 @@
 
 #define GLAD_EGL_VERSION_1_5 true
 
+#define AURORAOS_ENABLED
+
 #ifdef EGL_EXT_platform_base
 #define GLAD_EGL_EXT_platform_base 1
 #endif
@@ -366,9 +368,14 @@ Error EGLManager::initialize(void *p_native_display) {
 #ifdef EGL_EXT_platform_base
 		// eglGetPlatformDisplayEXT wants its attributes as EGLint.
 		Vector<EGLint> attribs;
+#ifndef AURORAOS_ENABLED
 		for (const EGLAttrib &attrib : _get_platform_display_attributes()) {
 			attribs.push_back((EGLint)attrib);
 		}
+#else
+		attribs.push_back(EGL_PLATFORM_WAYLAND_KHR);
+		attribs.push_bavk(EGL_NINE);
+#endif
 		tmp_display = eglGetPlatformDisplayEXT(_get_platform_extension_enum(), p_native_display, attribs.ptr());
 #endif // EGL_EXT_platform_base
 	} else {
