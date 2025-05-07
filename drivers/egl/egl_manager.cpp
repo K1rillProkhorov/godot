@@ -374,7 +374,7 @@ Error EGLManager::initialize(void *p_native_display) {
 		}
 #else
 		attribs.push_back(EGL_PLATFORM_WAYLAND_KHR);
-		attribs.push_bavk(EGL_NINE);
+		attribs.push_bavk(EGL_NONE);
 #endif
 		tmp_display = eglGetPlatformDisplayEXT(_get_platform_extension_enum(), p_native_display, attribs.ptr());
 #endif // EGL_EXT_platform_base

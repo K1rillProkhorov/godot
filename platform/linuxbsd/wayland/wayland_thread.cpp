@@ -1094,7 +1094,7 @@ void WaylandThread::_wl_output_on_name(void *data, struct wl_output *wl_output, 
 void WaylandThread::_wl_output_on_description(void *data, struct wl_output *wl_output, const char *description) {
 }
 
-void WaylandThreadL::_wl_shell_on_ping(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t serial) {
+void WaylandThread::_wl_shell_on_ping(void *data, struct wl_shell_surface *wl_shell_surface, uint32_t serial) {
 	wl_shell_surface_pong(wl_shell_surface, serial);
 }
 
@@ -1333,6 +1333,7 @@ void WaylandThread::_wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat
 			// TODO: Constrain new pointers if the global mouse mode is constrained.
 		}
 	} else {
+#ifndef AURORAOS_ENABLED
 		if (ss->cursor_frame_callback) {
 			// Just in case. I got bitten by weird race-like conditions already.
 			wl_callback_set_user_data(ss->cursor_frame_callback, nullptr);
@@ -1345,6 +1346,7 @@ void WaylandThread::_wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat
 			wl_surface_destroy(ss->cursor_surface);
 			ss->cursor_surface = nullptr;
 		}
+#endif
 
 		if (ss->wl_pointer) {
 			wl_pointer_destroy(ss->wl_pointer);
@@ -2744,12 +2746,16 @@ void WaylandThread::_wp_text_input_on_done(void *data, struct zwp_text_input_v3 
 		Ref<IMEUpdateEventMessage> msg;
 		msg.instantiate();
 		msg->text = ss->ime_text;
+#ifndef AURORAOS_ENABLED
 		msg->selection = ss->ime_cursor;
+#endif
 		ss->wayland_thread->push_message(msg);
 	}
 	ss->ime_text = String();
 	ss->ime_text_commit = String();
+#ifndef AURORAOS_ENABLED
 	ss->ime_cursor = Vector2i();
+#endif
 }
 
 void WaylandThread::_xdg_activation_token_on_done(void *data, struct xdg_activation_token_v1 *xdg_activation_token, const char *token) {
@@ -3292,7 +3298,7 @@ void WaylandThread::window_create(DisplayServer::WindowID p_window_id, int p_wid
 	}
 #endif
 
-#ifdef AURORAOS_ENABLEd
+#ifdef AURORAOS_ENABLED
 	if (!decorated) {
 		ws.wl_shell_surface = wl_shell_get_shell_surface(registry.wl_shell, ws.wl_surface);
 		wl_shell_surface_add_listener(ws.wl_shell_surface, &wl_shell_surface_listener, &ws);
@@ -3787,7 +3793,7 @@ Error WaylandThread::init() {
 	ERR_FAIL_NULL_V_MSG(registry.wl_compositor, ERR_UNAVAILABLE, "Can't obtain the Wayland compositor global.");
 
 #ifdef AURORAOS_ENABLED
-	ERR_FAIL_NULL_V_MSG(registry.wl_shell, ERR_UNAVAILAVLE, "Can't obtain the Wayland Wl shell gloabal.");
+	ERR_FAIL_NULL_V_MSG(registry.wl_shell, ERR_UNAVAILABLE, "Can't obtain the Wayland Wl shell gloabal.");
 #else
 	ERR_FAIL_NULL_V_MSG(registry.xdg_wm_base, ERR_UNAVAILABLE, "Can't obtain the Wayland XDG shell global.");
 #endif

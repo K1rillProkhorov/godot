@@ -68,12 +68,10 @@
 #include "wayland/protocol/viewporter.gen.h"
 #include "wayland/protocol/wayland.gen.h"
 
-#ifndef AURORAOS_ENABLED
 #include "wayland/protocol/xdg_activation.gen.h"
 #include "wayland/protocol/xdg_decoration.gen.h"
 #include "wayland/protocol/xdg_foreign.gen.h"
 #include "wayland/protocol/xdg_shell.gen.h"
-#endif
 
 #ifdef LIBDECOR_ENABLED
 #ifdef SOWRAP_ENABLED
@@ -768,7 +766,7 @@ private:
 	static constexpr struct wl_shell_surface_listener wl_shell_surface_listener = {
 		.ping = _wl_shell_on_ping,
 		.configure = _wl_shell_surface_on_configure,
-		.popup_done = _wl_sheell_surface_on_popup_done,
+		.popup_done = _wl_shell_surface_on_popup_done,
 	};
 
 	// xdg-shell event listeners.
